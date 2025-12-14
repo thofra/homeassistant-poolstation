@@ -3,9 +3,9 @@
   "name": "Poolstation",
   "config_flow": true,
   "documentation": "https://github.com/cibernox/homeassistant-poolstation",
-  "issue_tracker": "https://github.com/cibernox/homeassistant-poolstation/issues",  
+  "issue_tracker": "https://github.com/cibernox/homeassistant-poolstation/issues",
   "requirements": [
-    "pypoolstation==0.5.7"
+    "pypoolstation==0.5.8"
   ],
   "codeowners": [
     "@cibernox"

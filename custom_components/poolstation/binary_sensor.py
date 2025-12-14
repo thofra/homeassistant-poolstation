@@ -13,6 +13,7 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.const import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import PoolstationDataUpdateCoordinator
@@ -66,23 +67,37 @@ ENTITY_DESCRIPTIONS = (
         has_fn=lambda pool: pool.binary_input_4 is not None,
     ),
     PoolstationBinarySensorEntityDescription(
-        key="uv",
-        name="UV",
-        is_on_fn=lambda pool: not(pool.uv),
-        has_fn=lambda pool: pool.uv is not None,
+        key="uv_available",
+        name="UV Available",
+        is_on_fn=lambda pool: pool.uv_available,
+        has_fn=lambda pool: pool.uv_available is not None,
     ),
-        PoolstationBinarySensorEntityDescription(
+    PoolstationBinarySensorEntityDescription(
+        key="uv_enabled",
+        name="UV Enabled",
+        is_on_fn=lambda pool: pool.uv_enabled,
+        has_fn=lambda pool: pool.uv_enabled is not None,
+    ),
+    PoolstationBinarySensorEntityDescription(
+        key="uv_light",
+        name="UV Light",
+        is_on_fn=lambda pool: pool.uv_on,
+        has_fn=lambda pool: pool.uv_on is not None,
+    ),
+    PoolstationBinarySensorEntityDescription(
         key="uv_ballast",
         name="UV Ballast",
         device_class=BinarySensorDeviceClass.PROBLEM,
-        is_on_fn=lambda pool: not(pool.uv_ballast_problem),
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_on_fn=lambda pool: pool.uv_ballast_problem,
         has_fn=lambda pool: pool.uv_ballast_problem is not None,
     ),
     PoolstationBinarySensorEntityDescription(
         key="uv_fuse",
         name="UV Fuse",
         device_class=BinarySensorDeviceClass.PROBLEM,
-        is_on_fn=lambda pool: not(pool.uv_fuse_problem),
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_on_fn=lambda pool: pool.uv_fuse_problem,
         has_fn=lambda pool: pool.uv_fuse_problem is not None,
     ),        
 )

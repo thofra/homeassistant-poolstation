@@ -123,7 +123,7 @@ ENTITY_DESCRIPTIONS = (
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement="h",
         value_fn=lambda pool: pool.total_uv_timer,
-        has_fn=lambda pool: pool.uv_total_time_uv_timer is not None,
+        has_fn=lambda pool: pool.total_uv_timer is not None,
     )    
 )
 
