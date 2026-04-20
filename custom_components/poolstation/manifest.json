@@ -5,11 +5,11 @@
   "documentation": "https://github.com/cibernox/homeassistant-poolstation",
   "issue_tracker": "https://github.com/cibernox/homeassistant-poolstation/issues",
   "requirements": [
-    "pypoolstation @ git+https://github.com/straybiker/PyPoolstation.git@main"
+    "pypoolstation==0.6.0"
   ],
   "codeowners": [
     "@cibernox"
   ],
   "iot_class": "cloud_polling",
-  "version": "0.1.5"
+  "version": "0.1.6"
 }
