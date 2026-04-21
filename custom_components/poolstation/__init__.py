@@ -4,7 +4,7 @@ import logging
 from typing import Final
 
 import aiohttp
-from pypoolstation import Account, AuthenticationException, Pool
+from pypoolstation import Account, AuthenticationException, Pool, TwoFactorAuthRequiredException
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, CONF_TOKEN
@@ -44,6 +44,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         try:
             token = await account.login()
+        except TwoFactorAuthRequiredException as mfa_err:
+            _LOGGER.warning("Pool station 2FA required: %s", mfa_err)
+            raise ConfigEntryAuthFailed from mfa_err
         except AuthenticationException as login_err:
             _LOGGER.warning("Pool station Auth retry error: %s", login_err)
             # Unfortunately the poolstation API is crap and logging with wrong credentials returns a 500 instead of a 401

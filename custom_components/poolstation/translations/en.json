@@ -25,7 +25,21 @@
                 },
                 "description": "Please update your credentials",
                 "title": "Authentication with Poolstation failed"
-              }
+            },
+            "two_factor": {
+                "title": "Two-Factor Authentication",
+                "description": "Please enter the 2FA code sent to your email.",
+                "data": {
+                    "auth_code": "Authentication Code"
+                }
+            },
+            "reauth_two_factor": {
+                "title": "Two-Factor Authentication",
+                "description": "Please enter the 2FA code sent to your email to re-authenticate.",
+                "data": {
+                    "auth_code": "Authentication Code"
+                }
+            }
         }
     }
 }

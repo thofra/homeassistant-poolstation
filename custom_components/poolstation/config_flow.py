@@ -6,7 +6,7 @@ import logging
 from typing import Any, Final
 
 from aiohttp import ClientResponseError, DummyCookieJar
-from pypoolstation import AuthenticationException
+from pypoolstation import AuthenticationException, TwoFactorAuthRequiredException
 import voluptuous as vol
 
 from homeassistant import config_entries
@@ -14,7 +14,7 @@ from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
-from .const import DOMAIN, TOKEN
+from .const import DOMAIN, TOKEN, CONF_AUTH_CODE
 from .util import create_account
 
 _LOGGER: Final = logging.getLogger(__name__)
@@ -23,6 +23,12 @@ DATA_SCHEMA: Final = vol.Schema(
     {
         vol.Required(CONF_EMAIL): str,
         vol.Required(CONF_PASSWORD): str,
+    }
+)
+
+TWO_FACTOR_SCHEMA: Final = vol.Schema(
+    {
+        vol.Required(CONF_AUTH_CODE): str,
     }
 )
 
@@ -57,11 +63,20 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if not user_input:
             return self._show_reauth_confirm_form()
 
+        # Update original data with new credentials
+        self._original_data.update(user_input)
+        
+        return await self._attempt_reauth(self._original_data)
+
+    async def _attempt_reauth(self, user_input):
         account = self._create_account(user_input)
         errors: dict[str, str]
         errors = {}
         try:
-            token = await account.login()
+            login_code = user_input.get(CONF_AUTH_CODE, "")
+            token = await account.login(login_code=login_code)
+        except TwoFactorAuthRequiredException:
+            return await self.async_step_reauth_two_factor()
         except (asyncio.TimeoutError, ClientResponseError):
             errors["base"] = "cannot_connect"
         except AuthenticationException:
@@ -99,7 +114,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         account = self._create_account(user_input)
 
         try:
-            token = await account.login()
+            login_code = user_input.get(CONF_AUTH_CODE, "")
+            token = await account.login(login_code=login_code)
+        except TwoFactorAuthRequiredException:
+            self._original_data = user_input.copy()
+            return await self.async_step_two_factor()
         except (TimeoutError, ClientResponseError):
             errors["base"] = "cannot_connect"
         except AuthenticationException:
@@ -139,3 +158,31 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             ),
             errors=errors or {},
         )
+
+    async def async_step_two_factor(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle the 2FA step."""
+        if user_input is None:
+            return self.async_show_form(
+                step_id="two_factor", data_schema=TWO_FACTOR_SCHEMA
+            )
+
+        login_data = self._original_data.copy()
+        login_data[CONF_AUTH_CODE] = user_input[CONF_AUTH_CODE]
+        
+        return await self._attempt_login(login_data)
+
+    async def async_step_reauth_two_factor(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle the 2FA step for reauth."""
+        if user_input is None:
+            return self.async_show_form(
+                step_id="reauth_two_factor", data_schema=TWO_FACTOR_SCHEMA
+            )
+
+        login_data = self._original_data.copy()
+        login_data[CONF_AUTH_CODE] = user_input[CONF_AUTH_CODE]
+        
+        return await self._attempt_reauth(login_data)

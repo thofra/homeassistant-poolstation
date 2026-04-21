@@ -39,6 +39,7 @@ ENTITY_DESCRIPTIONS = (
         key="water_flow",
         name="Water Flow",
         device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=EntityCategory.DIAGNOSTIC,
         is_on_fn=lambda pool: pool.waterflow_problem,
         has_fn=lambda pool: pool.waterflow_problem is not None,
     ),
