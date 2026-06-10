@@ -13,8 +13,9 @@ from .const import COORDINATORS, DEVICES, DOMAIN
 from .entity import PoolEntity
 
 # API values returned by the Poolstation API for relay state
+# Only "0" (off) and "1" (on) are well-defined.
+# Any other value ("A", "2", "9", etc.) is treated as AUTO.
 RELAY_MODE_OFF = "0"
-RELAY_MODE_AUTO = "A"   # AUTO mode - the bug: was treated as False (off)
 RELAY_MODE_ON = "1"
 
 # HA select option labels
@@ -24,17 +25,10 @@ OPTION_ON = "on"
 
 RELAY_OPTIONS = [OPTION_OFF, OPTION_AUTO, OPTION_ON]
 
-# Mapping from API value → HA option
-API_TO_OPTION = {
-    RELAY_MODE_OFF: OPTION_OFF,
-    RELAY_MODE_AUTO: OPTION_AUTO,
-    RELAY_MODE_ON: OPTION_ON,
-}
-
-# Mapping from HA option → API value
+# Mapping from HA option → API value sent to the API
 OPTION_TO_API = {
     OPTION_OFF: RELAY_MODE_OFF,
-    OPTION_AUTO: RELAY_MODE_AUTO,
+    OPTION_AUTO: "A",   # send "A" to the API when setting AUTO
     OPTION_ON: RELAY_MODE_ON,
 }
 
@@ -71,8 +65,15 @@ class PoolRelaySelect(PoolEntity, SelectEntity):
 
     @staticmethod
     def _raw_to_option(raw_state: str | None) -> str:
-        """Convert raw API state to HA option string."""
-        return API_TO_OPTION.get(str(raw_state) if raw_state is not None else "", OPTION_OFF)
+        """Convert raw API state to HA option.
+        '0' → off, '1' → on, anything else → auto.
+        """
+        s = str(raw_state) if raw_state is not None else "0"
+        if s == "1":
+            return OPTION_ON
+        if s == "0":
+            return OPTION_OFF
+        return OPTION_AUTO  # "A", "2", "9", or any unknown value
 
     @property
     def current_option(self) -> str:

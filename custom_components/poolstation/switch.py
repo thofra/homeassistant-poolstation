@@ -52,8 +52,11 @@ class PoolRelaySwitch(PoolEntity, SwitchEntity):
 
     @staticmethod
     def _raw_to_bool(raw_state: str | None) -> bool:
-        """Convert raw API state to bool. AUTO and ON are both considered 'on'."""
-        return str(raw_state) in ("1", "A") if raw_state is not None else False
+        """Convert raw API state to bool.
+        '0' → False, '1' → True, anything else (AUTO) → True.
+        """
+        s = str(raw_state) if raw_state is not None else "0"
+        return s != "0"
 
     @property
     def extra_state_attributes(self) -> dict:
