@@ -17,7 +17,8 @@ from aiohttp import ClientError, ClientResponseError
 from .const import COORDINATORS, DEVICES, DOMAIN, AUTH_RETRIES
 from .util import create_account
 
-PLATFORMS: Final = ["sensor", "number", "switch", "binary_sensor"]
+# Added "select" for the new off/auto/on relay control
+PLATFORMS: Final = ["sensor", "number", "switch", "binary_sensor", "select"]
 
 _LOGGER: Final = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         pools = await Pool.get_all_pools(session, account=account)
     except aiohttp.ClientError as err:
         _LOGGER.warning("Pool station Client error: %s", err)
-        await session.close()  # Ensure session is closed on error
+        await session.close()
         raise ConfigEntryNotReady from err
 
     except AuthenticationException as err:
@@ -49,8 +50,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             raise ConfigEntryAuthFailed from mfa_err
         except AuthenticationException as login_err:
             _LOGGER.warning("Pool station Auth retry error: %s", login_err)
-            # Unfortunately the poolstation API is crap and logging with wrong credentials returns a 500 instead of a 401
-            # That's why this block is probably never being called. Instead the next except will.
             raise ConfigEntryAuthFailed from login_err
         except aiohttp.ClientResponseError as response_err:
             _LOGGER.warning("Pool station Client retry error: %s", response_err)
@@ -99,7 +98,7 @@ class PoolstationDataUpdateCoordinator(DataUpdateCoordinator):
     def __init__(self, hass: HomeAssistant, pool: Pool) -> None:
         """Initialize global Poolstation data updater."""
         self.pool = pool
-        self.auth_retries = AUTH_RETRIES  # Initialize auth_retries here
+        self.auth_retries = AUTH_RETRIES
         super().__init__(
             hass,
             _LOGGER,
@@ -112,11 +111,9 @@ class PoolstationDataUpdateCoordinator(DataUpdateCoordinator):
         _LOGGER.debug("Starting data update for pool: %s (auth_retries: %d)", self.pool.alias, self.auth_retries)
         try:
             await self.pool.sync_info()
-            _LOGGER.debug("Successfully updated pool data for: %s (auth_retries: %d)", self.pool.alias, self.auth_retries)
-            # reset counter
+            _LOGGER.debug("Successfully updated pool data for: %s", self.pool.alias)
             self.auth_retries = AUTH_RETRIES
         except ClientResponseError as err:
-            # ignore the error, most likely a server side timeout
             _LOGGER.warning("ClientResponse error while retrieving data for pool %s: %s", self.pool.alias, err)
         except AuthenticationException as err:
             if self.auth_retries > 0:

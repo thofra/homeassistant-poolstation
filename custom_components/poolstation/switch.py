@@ -33,7 +33,13 @@ async def async_setup_entry(
 
 
 class PoolRelaySwitch(PoolEntity, SwitchEntity):
-    """Representation of a pool relay switch."""
+    """Representation of a pool relay switch.
+
+    Note: Use the companion PoolRelaySelect entity for full off/auto/on control.
+    This switch maps AUTO and ON both to 'on', and OFF to 'off'.
+    Turning this switch OFF sets the relay to OFF mode.
+    Turning this switch ON sets the relay to ON mode (not AUTO).
+    """
 
     def __init__(
         self, pool: Pool, coordinator: PoolstationDataUpdateCoordinator, relay: Relay
@@ -41,21 +47,36 @@ class PoolRelaySwitch(PoolEntity, SwitchEntity):
         """Initialize the pool relay switch."""
         super().__init__(pool, coordinator, f" Relay {relay.name}")
         self.relay = relay
-        self._attr_is_on = self.relay.active
+        # FIX: treat AUTO ("A") and ON ("1") both as on=True
+        self._attr_is_on = self._raw_to_bool(relay.raw_state)
+
+    @staticmethod
+    def _raw_to_bool(raw_state: str | None) -> bool:
+        """Convert raw API state to bool. AUTO and ON are both considered 'on'."""
+        return str(raw_state) in ("1", "A") if raw_state is not None else False
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return extra attributes including the actual relay mode."""
+        return {
+            "mode": self.relay.raw_state,
+        }
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        """Turn the relay on."""
-
-        self._attr_is_on = await self.relay.set_active(True)
+        """Turn the relay on (sets to ON mode, not AUTO)."""
+        await self.relay.set_mode("1")
+        self._attr_is_on = True
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the relay off."""
-        self._attr_is_on = await self.relay.set_active(False)
+        await self.relay.set_mode("0")
+        self._attr_is_on = False
         self.async_write_ha_state()
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        self._attr_is_on = self.relay.active
+        # FIX: AUTO mode ("A") is now correctly treated as on=True
+        self._attr_is_on = self._raw_to_bool(self.relay.raw_state)
         self.async_write_ha_state()
