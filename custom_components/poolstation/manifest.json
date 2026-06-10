@@ -5,7 +5,6 @@
   "documentation": "https://github.com/cibernox/homeassistant-poolstation",
   "issue_tracker": "https://github.com/cibernox/homeassistant-poolstation/issues",
   "requirements": [
-    "pypoolstation==0.6.0"
   ],
   "codeowners": [
     "@cibernox"
